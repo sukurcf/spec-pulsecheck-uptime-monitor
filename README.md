@@ -1,6 +1,8 @@
 # PulseCheck uptime and SSL monitor
 
-A Python CLI project that checks websites, detects incidents, warns about SSL expiry, and reports uptime evidence.
+A backend-only Python CLI project that checks HTTP/TLS endpoints, detects incidents, sends notifications, and exports Markdown, text, JSON, or CSV uptime evidence. Students MUST NOT build a frontend, terminal dashboard, report page, or documentation site, including bonus work.
+
+This repository contains specifications only: exactly 15 Markdown documents, not an implementation. [Document 06](docs/06-tech-stack-and-setup.md#local-operation-contract) defines the local operation contract students MUST implement: `make local-start`, `make local-demo`, and `make local-stop`. Local training uses HTTP `127.0.0.1:8765`, TLS `localhost:8766`, and webhook `127.0.0.1:8767` fixtures after initial downloads and certificate preparation. Default website checks in live mode still need network access; there is no silent offline fallback. No cloud account, public hostname, or API key is needed locally.
 
 ## Quick facts
 
@@ -12,7 +14,9 @@ A Python CLI project that checks websites, detects incidents, warns about SSL ex
 | Target job roles | Python Developer, Automation Engineer, Junior SRE, Production Support Engineer |
 | Key skills | Python packaging, Typer, asyncio, httpx, Pydantic, SQLite, TLS, pytest, mypy, GitHub Actions |
 | Prerequisites | Basic Python, basic SQL, Git basics, and terminal basics |
-| Minimum hardware | 8 GB RAM laptop in the Lite profile |
+| Minimum hardware | 8 GB RAM, 4 cores, 2 GB free disk in the Lite profile |
+| Recommended hardware | 16 GB RAM, 4 or more cores, 5 GB free disk for optional local support services |
+| WSL2 memory/swap | 8 GB host: 4 GB/4 GB; 16 GB host: 8 GB/4 GB |
 | Student repository name | `pulsecheck` |
 
 ## What you will build
@@ -27,6 +31,7 @@ A Python CLI project that checks websites, detects incidents, warns about SSL ex
 - SSL expiry and hostname checks with 30, 14, and 7 day warnings.
 - Console and webhook notifications with de-duplication and cooldown.
 - Uptime, p95 latency, missed check, incident, and MTTR reports.
+- Reproducible local seed/fixtures, persistent SQLite data, health checks, and network-isolated acceptance tests.
 
 ## Architecture at a glance
 
@@ -106,3 +111,4 @@ Every Friday, show a 15-minute demo to the trainer. Show working software, not s
 | Version | Date | Notes |
 |---|---|---|
 | 1.0 | 2026-10-02 | First release |
+| 1.1 | 2026-10-02 | Backend/CLI-only revision. Frontend and cloud exercises are removed; their effort and grading points move to Python report statistics, replay validation, tests, and local operations. Existing Python coverage and 45-test minimum remain. |

@@ -22,12 +22,12 @@ Purpose: This document defines measurable quality requirements and verification 
 | NFR-OBS-01 | Observability | Must | Each stored check has a correlation ID and logs include target, status, latency, and attempts. | Log fixture assertions. |
 | NFR-OBS-02 | Observability | Must | JSON log mode emits one JSON object per line. | CLI snapshot test. |
 | NFR-USE-01 | Usability | Must | Validation errors include path, code, and reason. | CLI tests for invalid targets files. |
-| NFR-PORT-01 | Portability | Must | Must scope runs on Windows 11 WSL2 Ubuntu, macOS, and Linux. | Ubuntu and Windows CI; macOS smoke test is Should. |
-| NFR-HW-01 | Hardware | Must | Must scope runs on an 8 GB RAM laptop with no Docker services required. | Trainer pre-check on 8 GB laptop before week 1. |
+| NFR-PORT-01 | Portability | Must | Must scope runs on Windows 11 WSL2 Ubuntu, macOS, and Linux using the local contract, without external egress after preparation. | TC-LOCAL-001 to TC-LOCAL-004; Ubuntu/Windows CI and recorded macOS trainer smoke evidence. |
+| NFR-HW-01 | Hardware | Must | Target 8 GB RAM, 4 cores, 2 GB free disk; no Docker required; proposed 1 GiB runtime budget. | Trainer pre-check records actual resource use; limits are not measured claims. |
 | NFR-LIC-01 | Licence | Must | Mandatory dependencies use approved open-source licences. | Dependency licence review before final demo. |
 | NFR-CI-01 | CI duration | Should | Required CI pipeline finishes in under 10 minutes after dependency cache warm-up. | GitHub Actions timing report. |
 | NFR-ACC-01 | Accessibility | Must | Terminal output does not rely on colour alone. | Manual review and snapshot test with colour disabled. |
-| NFR-DOC-01 | Documentation | Must | README setup from a clean clone uses 10 steps or fewer. | Trainer follows README on a clean machine. |
+| NFR-DOC-01 | Documentation | Must | README setup from a clean clone uses 10 steps or fewer and documents start/stop, seed/demo, persistence, reset confirmation, and local failures. | Trainer follows document 06; TC-LOCAL-001 to TC-LOCAL-004. |
 
 ## Performance requirements
 
@@ -59,7 +59,7 @@ Webhook URLs, SMTP passwords, and bearer tokens MUST come from environment varia
 
 ## Privacy and DPDP Act 2023 awareness
 
-PulseCheck does not require personal data. Sample targets MUST use fictional service names and `example.in` or `example.com` domains. If a real team puts personal data into target names, URLs, or tags, the student documentation MUST tell them to minimise that data and restrict report sharing.
+PulseCheck does not require personal data. Live configuration examples MUST use fictional service names and `example.in` or `example.com` domains. Offline training MUST use localhost/loopback fixtures with fictional seed records instead; example domains are not offline services. If a real team puts personal data into target names, URLs, or tags, the student documentation MUST tell them to minimise that data and restrict report sharing.
 
 ## Maintainability requirements
 
@@ -79,10 +79,12 @@ The CLI MUST print clear text labels such as `UP`, `DEGRADED`, `DOWN`, and `UNKN
 
 | Profile | Minimum hardware | Required behaviour |
 |---|---|---|
-| Lite | 8 GB RAM, 4 CPU cores recommended | Must scope runs locally with SQLite and no mandatory Docker services. Performance target still uses 200 local targets. |
-| Standard | 16 GB RAM, 4 or more CPU cores | Should items can run Docker Compose with Mailpit and one local HTTP test target. |
+| Lite | 8 GB RAM, 4 CPU cores, 2 GB free disk | SQLite and Python HTTP/TLS/webhook fixtures; no mandatory Docker. Proposed budgets and the 200-target performance gate are verified, not assumed. |
+| Standard | 16 GB RAM, 4 or more CPU cores, 5 GB free disk | Should items can run one optional Docker Compose/Mailpit support stack. |
 
 Windows users SHOULD configure WSL2 with `.wslconfig` memory `4GB` and swap `4GB` on 8 GB laptops. On 16 GB laptops, use memory `8GB` and swap `4GB`. The trainer MUST validate the lite profile on an 8 GB laptop before week 1.
+
+The authoritative [local contract](06-tech-stack-and-setup.md#local-operation-contract) binds fixture listeners to loopback, preserves SQLite across stop/start, and requires explicit reset confirmation. Local fixtures are selected deliberately; live website checks still need network access and never silently fall back to recorded results.
 
 ## Licence compliance
 

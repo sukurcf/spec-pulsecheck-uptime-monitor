@@ -6,6 +6,8 @@ Purpose: This document defines the PulseCheck test approach, tools, environments
 
 PulseCheck tests MUST prove that the CLI is safe for automation and useful during incidents. The pyramid favours fast pure-logic tests, then integration tests with local services, then focused CLI and performance tests.
 
+Maintain at least **45 meaningful cases**; the catalog remains above that minimum. Version 1.1 replaces page/dashboard evidence with Python statistics/replay validation and adds TC-LOCAL-001 through TC-LOCAL-004 as mandatory local acceptance.
+
 | Level | Approximate count | Main purpose | Examples |
 |---|---:|---|---|
 | Unit | 24 | Exhaust pure decisions and boundary rules. | Classification, incident state, p95, uptime, SSL evaluator, validation. |
@@ -13,6 +15,7 @@ PulseCheck tests MUST prove that the CLI is safe for automation and useful durin
 | CLI | 12 | Verify Typer commands, output, and exit codes. | `init`, `validate`, `check`, `status`, `history`, `report`, `purge`. |
 | Security | 4 | Verify safe defaults and redaction. | TLS verification, secret logs, pip-audit, Gitleaks. |
 | Performance and recovery | 4 | Verify concurrency, shutdown, and scale. | 200 targets under 10 seconds, signal shutdown. |
+| Local acceptance | 4 | Prove the implementation operation contract. | Clean startup, offline demo, persisted restart, dependency/input failures. |
 
 ## Test tools and reference versions
 
@@ -38,7 +41,7 @@ PulseCheck tests MUST prove that the CLI is safe for automation and useful durin
 
 | Environment | Operating system | Python versions | Required services | Purpose |
 |---|---|---|---|---|
-| Developer local lite | WSL2 Ubuntu, macOS, or Linux | 3.12.x | Local SQLite and pytest-httpserver | Daily development. |
+| Developer local lite | Windows 11 WSL2 Ubuntu, macOS, or Linux | 3.12.x | SQLite and prepared localhost HTTP/TLS/webhook fixtures | Daily development and local acceptance. |
 | CI Ubuntu | Ubuntu runner | 3.12.x and 3.13.x | Local SQLite, local HTTP, local TLS, and local webhook fixtures | Main gate for tests and coverage. |
 | CI Windows | Windows runner | 3.12.x and 3.13.x | Local SQLite, local HTTP, local TLS, and local webhook fixtures | Same portable tests as Ubuntu; SIGTERM is excluded. |
 | Standard optional | 16 GB laptop | 3.12.x | Optional Mailpit and local test target | Should SMTP and Docker checks. |
@@ -55,12 +58,14 @@ All portable unit, integration, CLI, local HTTP, TLS, and webhook fixture tests 
 - Webhook tests MUST use a local HTTP receiver and fixed payload assertions.
 - Performance tests MUST generate 200 local targets with deterministic names `target-001` to `target-200`.
 - No test MAY use real personal data, real company endpoints, or internet calls.
+- DNS failure tests MUST stub the resolver, not query an external DNS server. Example-domain strings are validation/payload data, not endpoints to contact.
+- Store the recorded five-result seed fixture from document 06 under `tests/fixtures/`; prepare trustme certificate files and dependency caches before network isolation. Loopback remains available; external egress MUST be denied during local acceptance.
 
 ## Coverage thresholds
 
 | Scope | Measured packages | Line threshold | Branch threshold | Enforced separately | Exclusions |
 |---|---|---:|---:|---|---|
-| Whole package | `pulsecheck` | 90% | 80% | Yes | tests, generated files, `__main__` blocks, optional dashboard code. |
+| Whole package | `pulsecheck` | 90% | 80% | Yes | tests, generated files, documented `__main__` blocks only; implemented optional Python modules remain measured. |
 | Classifier module | `pulsecheck.checks.classifier` classifier decisions | 100% | 100% | Yes | none. |
 | Incident engine | `pulsecheck.incidents.engine` incident transitions | 100% | 100% | Yes | none. |
 | Uptime calculator | `pulsecheck.reports.uptime` availability formula | 100% | 100% | Yes | none. |
@@ -95,7 +100,7 @@ The CI build MUST fail when a line threshold or a branch threshold is below its 
 | TC-UT-020 | Validate retry boundaries | Unit | Must | FR-CHECK-02 | Validate retry boundaries fixture is ready. | Validate `global.retries: -1`, then validate `global.retries: 6`. | Two config objects. | First error says `must be between 0 and 5`; second error uses the same path with value 6. |
 | TC-IT-001 | Store final outcome only after retries | Integration | Must | FR-CHECK-02 | SQLite database is empty. | Configure retries 2; local server fails twice with connection error and returns 200 on third attempt; run one check. | Target `retry-api`. | `check_results` has exactly 1 row with status `UP` and `attempt_count` 3. |
 | TC-IT-002 | Enforce concurrency limit of two | Integration | Must | FR-CHECK-01 | A local threaded pytest-httpserver or ASGI test server records active requests. | Run 5 local targets with `global.concurrency: 2`, `global.retries: 0`, and each response delayed 200 ms. | Targets `target-1` to `target-5`. | Maximum simultaneous active requests observed by a server that can serve at least 50 concurrent requests is 2. |
-| TC-IT-003 | Continue after one target DNS failure | Integration | Must | FR-CHECK-01 | One local healthy server is running. | Run two targets: invalid host `missing.invalid` and local 200 endpoint. | Targets `bad-dns`, `college-home`. | `bad-dns` is `DOWN` with `dns`; `college-home` is `UP`; command summary includes both targets. |
+| TC-IT-003 | Continue after one target DNS failure | Integration | Must | FR-CHECK-01 | One local healthy server runs; resolver stub raises a DNS error for `missing.invalid`. | Run the bad-DNS target and local 200 endpoint with external egress denied. | Targets `bad-dns`, `college-home`. | `bad-dns` is `DOWN` with `dns`; `college-home` is `UP`; both are in the summary and no external DNS query occurs. |
 | TC-IT-004 | Store incident and result in one transaction | Integration | Must | FR-STORE-01 | SQLite repository starts a writable transaction. | Process the third DOWN result that opens an incident. | Target `api-health`. | One check row and one incident row commit together; forced exception before commit leaves neither row. |
 | TC-IT-005 | Purge old evidence and preserve open incident | Integration | Must | FR-STORE-02 | Database has old rows and one open incident. | Run purge repository operation with cutoff 90 days. | 2 old check rows, 3 expired missed checks by `scheduled_at`, 1 old SSL row, 1 open incident. | Deletes 2 `check_results` rows, 3 `missed_checks` rows, and 1 SSL row; open incident count remains 1. |
 | TC-IT-006 | Query history with UTC conversion | Integration | Must | FR-CLI-06 | Database has rows around midnight UTC. | Query history since `2026-10-02T00:00:00+05:30` and until `2026-10-03T00:00:00+05:30`. | Target `fee-portal`. | Filter bounds convert to UTC and return only rows from `2026-10-01T18:30:00Z` inclusive. |
@@ -136,9 +141,9 @@ The CI build MUST fail when a line threshold or a branch threshold is below its 
 | TC-CLI-017 | report JSON shape includes target metrics | CLI | Must | FR-CLI-07 | Database has rows for `college-home`. | Execute the report json shape includes target metrics command: `pulsecheck report --format json --target college-home --since 2026-10-01T00:00:00Z`. | 50 completed checks. | JSON `scope.target` is `college-home` and `targets[0].completed_checks` is 50. |
 | TC-IT-016 | schema version migration runs before read | Integration | Must | FR-STORE-01 | Database schema version is one version behind. | Start `status` repository read. | Migration note `add ssl observation index`. | Migration updates `schema_version` before status query returns rows. |
 | TC-CLI-018 | colour disabled still shows text status | CLI | Must | FR-REPORT-01 | Terminal colour is disabled. | Execute the colour disabled still shows text status command: `pulsecheck status` on one DOWN target. | Environment disables colour. | Output contains plain text `DOWN` and does not require colour to identify failure. |
-| TC-IT-017 | SMTP missing credentials warning | Integration | Should | FR-NOTIF-03 | SMTP channel is requested without password. | Validate optional SMTP settings. | Missing `PULSECHECK_SMTP_PASSWORD`. | Warning says SMTP is disabled and console notifications remain enabled. |
+| TC-IT-017 | SMTP missing auth credentials warning | Integration | Should | FR-NOTIF-03 | SMTP authentication is requested with username `training` but no password. | Validate settings; separately verify local unauthenticated Mailpit settings need no password. | Missing `PULSECHECK_SMTP_PASSWORD` in auth case only. | Auth case warns/disables SMTP with console retained; unauthenticated local Mailpit remains enabled without an account/key. |
 | TC-CLI-019 | CSV history header | CLI | Should | FR-REPORT-04 | Database has three rows. | Execute the csv history header command: `pulsecheck history --format csv`. | Three check rows. | First line is `target_name,checked_at,status,latency_ms,attempt_count,error_kind`. |
-| TC-CLI-020 | HTML report writes static file | CLI | Should | FR-REPORT-05 | Output directory exists. | Execute `pulsecheck report --format html --since 2026-10-01T00:00:00Z --until 2026-10-08T00:00:00Z --output status.html`. | Weekly report rows. | File `status.html` contains uptime percent, incident count, and no script tag. |
+| TC-CLI-020 | Tag report statistics export | CLI | Should | FR-REPORT-05, BR-09, BR-10 | Two stored final responses belong to current YAML tag `training`. | Run report for their period with `--group-by tag --format json`; repeat with CSV. | UP 100 ms, DOWN 200 ms, plus 1 missed check. | Group has completed 2, down 1, uptime 50.00, p95 200; missed check is outside denominator; CSV parses and no page is produced. |
 | TC-UT-021 | Incident thresholds one and one | Unit | Must | FR-INC-01 | Incident engine uses open threshold 1 and close threshold 1. | Process `DOWN`, then `UP` for `fee-portal`. | Thresholds `N=1`, `M=1`. | One incident opens on the first result and closes on the first recovery result. |
 | TC-UT-022 | Incident thresholds four and three | Unit | Must | FR-INC-01 | Incident engine uses open threshold 4 and close threshold 3. | Process four `DOWN` results, then `UP`, `DEGRADED`, `UP`. | Thresholds `N=4`, `M=3`. | One incident opens on the fourth DOWN and closes with `ended_at` at the first `UP`. |
 | TC-UT-023 | Retry backoff without jitter | Unit | Must | FR-CHECK-02 | Jitter is set to 0 for a deterministic clock. | Calculate retry delays for 5 retries. | Backoff policy `0.25, 0.5, 1, 2, 2`. | The scheduled delays are exactly `0.25`, `0.5`, `1`, `2`, and `2` seconds. |
@@ -151,6 +156,18 @@ The CI build MUST fail when a line threshold or a branch threshold is below its 
 | TC-UT-026 | SSL first observation at twenty days | Unit | Must | FR-SSL-02 | No prior warning exists for hostname `www.example.in` and fingerprint `abc123`. | Evaluate days remaining 20. | Thresholds 30, 14, and 7. | Exactly one warning is returned with dedupe key `ssl:www.example.in:abc123:30`. |
 | TC-UT-027 | SSL first observation at six days | Unit | Must | FR-SSL-02 | No prior warning exists for hostname `www.example.in` and fingerprint `abc123`. | Evaluate days remaining 6. | Thresholds 30, 14, and 7. | Three warnings are returned for thresholds 30, 14, and 7. |
 | TC-UT-028 | Shared host SSL warning de-duplicates | Unit | Must | FR-SSL-02 | Two targets use hostname `www.example.in` and the same certificate fingerprint. | Evaluate both targets for threshold 30. | Targets `college-home` and `admissions-home`. | Only one warning exists for dedupe key `ssl:www.example.in:abc123:30`. |
+| TC-CLI-021 | Replay validates incident/outbox invariants | CLI | Could | FR-REPLAY-01 | Recorded seed exists and destination is fresh. | Replay the five-result seed; repeat with an out-of-order timestamp and with an existing runtime destination. | DOWN/DOWN/DOWN/UP/UP; isolated `.local/replay.db`. | Valid replay exits 0 with checks 5, closed incidents 1, notification keys 2 and no sends; invalid replay exits 2 `replay-invalid` without rows; existing destination exits 2 `replay-database-not-fresh`. |
+
+## Local acceptance catalog
+
+Implement a pytest `local` marker and run `uv run --offline pytest -m local` after preparing the environment. Tests use an isolated project-local workspace, not a student's live database. Use the exact [document 06 contract](06-tech-stack-and-setup.md#local-operation-contract); network denial covers external egress, not localhost.
+
+| ID | Linked IDs | Preconditions and operation | Exact expected result |
+|---|---|---|---|
+| TC-LOCAL-001 | FR-LOCAL-01, FR-PKG-01, FR-STORE-01, NFR-PORT-01, NFR-DOC-01, BR-22 | Clean clone; cached dependencies and prepared TLS files; no `.local/` databases. Run `make local-start`, health checks, and local validate. | Start exits 0 with `local-ready targets=2`; HTTP/TLS/webhook health returns 200 `{"status":"ok"}`; validate prints `Configuration valid: 2 targets`; migrated demo has 5 checks, 1 closed incident, 2 console notifications. |
+| TC-LOCAL-002 | FR-LOCAL-01, FR-CLI-07, FR-SSL-01, FR-REPORT-02, BR-09, BR-10, BR-11, BR-22 | Deny external egress after preparation. Run `make local-demo` twice. | Both runs exit 0 with `local checks: local-api=UP local-tls=UP` and the exact seed summary in document 06: completed 5, down 3, uptime 40.00%, p95 100, closed 1, open 0, missed 0, MTTR 180, console notifications 2. Seed row counts do not grow. |
+| TC-LOCAL-003 | FR-LOCAL-01, FR-STORE-01, FR-NOTIF-02, NFR-REL-02, BR-12, BR-15, BR-22 | Save stored result/incident IDs; leave one pending webhook row with fixed ID and due retry. Stop/start with receiver available; attempt reset without confirmation. | Stop prints `local-stopped data-preserved`; saved IDs remain; retry uses the same notification ID, leaving 1 row for its channel/key; reset exits 2 `local-reset-confirmation-required` and changes no data. |
+| TC-LOCAL-004 | FR-LOCAL-01, FR-CFG-02, FR-CLI-08, FR-CHECK-03, NFR-USE-01, BR-02, BR-17, BR-22 | In isolated runs: invalid concurrency 0; occupied port 8765; missing TLS fixtures/tool; stop only HTTP fixture; lock SQLite beyond retry budget. | Invalid config exits 2 with path/code/reason; start exits 2 `local-port-in-use: 8765`, `local-tls-fixture-missing`, or `local-dependency-missing: <tool>`; check stores HTTP DOWN/connection and TLS UP, exit 1; locked DB exits 3 `Internal error: database is locked`. No downloads/live fallback. |
 
 ## Functional traceability matrix
 
@@ -181,6 +198,7 @@ The CI build MUST fail when a line threshold or a branch threshold is below its 
 | FR-NOTIF-02 | func-w evidence: TC-IT-012, TC-IT-013, TC-IT-018, TC-IT-020 |
 | FR-OBS-01 | func-x evidence: TC-CLI-014, TC-CLI-015, TC-SEC-001 |
 | FR-PKG-01 | func-y evidence: TC-CLI-016 |
+| FR-LOCAL-01 | TC-LOCAL-001, TC-LOCAL-002, TC-LOCAL-003, TC-LOCAL-004 |
 | FR-REPORT-01 | func-z evidence: TC-CLI-007, TC-CLI-018 |
 | FR-REPORT-02 | func-aa evidence: TC-UT-010, TC-UT-012, TC-UT-013, TC-CLI-011 |
 | FR-REPORT-03 | func-ab evidence: TC-UT-011, TC-CLI-011, TC-CLI-012 |
@@ -190,8 +208,8 @@ The CI build MUST fail when a line threshold or a branch threshold is below its 
 | FR-SSL-03 | func-af evidence: Demo-D01: show issuer and subject in optional SSL output. |
 | FR-OPS-01 | func-ag evidence: Demo-D02: start optional Docker image with mounted config. |
 | FR-SCHED-03 | func-ah evidence: Demo-D03: show maintenance window suppressing notification. |
-| FR-DOC-01 | func-ai evidence: Demo-D04: build MkDocs Material site locally. |
-| FR-UI-01 | func-aj evidence: Demo-D05: optional Textual dashboard after Must scope. |
+| FR-DOC-01 | func-ai evidence: Demo-D04: follow the local Markdown CLI usage guide and compare help/version snapshots. |
+| FR-REPLAY-01 | func-aj evidence: TC-CLI-021 |
 | FR-MET-01 | func-ak evidence: Demo-D06: optional Prometheus endpoint disabled by default. |
 | FR-CHECK-04 | func-al evidence: Demo-D07: optional TCP and DNS target types. |
 | FR-NOTIF-04 | func-am evidence: Demo-D08: optional Telegram notifier with env token. |
@@ -222,6 +240,7 @@ The CI build MUST fail when a line threshold or a branch threshold is below its 
 | BR-19 | rule-s evidence: TC-CLI-016 |
 | BR-20 | rule-t evidence: TC-CLI-010, TC-CLI-011, TC-CLI-017 |
 | BR-21 | rule-u evidence: Demo-D02 |
+| BR-22 | TC-LOCAL-001, TC-LOCAL-002, TC-LOCAL-003, TC-LOCAL-004 |
 
 ## NFR traceability matrix
 
@@ -243,12 +262,12 @@ The CI build MUST fail when a line threshold or a branch threshold is below its 
 | NFR-OBS-01 | nfr-n evidence: TC-CLI-014 |
 | NFR-OBS-02 | nfr-o evidence: TC-CLI-014 |
 | NFR-USE-01 | nfr-p evidence: TC-UT-017, TC-UT-019 |
-| NFR-PORT-01 | nfr-q evidence: Demo-D13: Ubuntu and Windows CI matrix passes; macOS smoke run is recorded. |
+| NFR-PORT-01 | nfr-q evidence: TC-LOCAL-001 to TC-LOCAL-004; Demo-D13: Ubuntu and Windows matrix plus WSL2/macOS trainer entrypoint evidence. |
 | NFR-HW-01 | nfr-r evidence: Demo-D14: trainer lite-profile pre-check on 8 GB laptop. |
 | NFR-LIC-01 | nfr-s evidence: Demo-D15: dependency licence review evidence before final demo. |
 | NFR-CI-01 | nfr-t evidence: Demo-D16: CI timing report under 10 minutes after cache warm-up. |
 | NFR-ACC-01 | nfr-u evidence: TC-CLI-018 |
-| NFR-DOC-01 | nfr-v evidence: Demo-D17: trainer completes README setup in 10 steps or fewer. |
+| NFR-DOC-01 | nfr-v evidence: TC-LOCAL-001 to TC-LOCAL-004; Demo-D17: trainer completes README setup in 10 steps or fewer. |
 
 ## Performance test conditions
 
@@ -298,5 +317,6 @@ The CI build MUST fail when a line threshold or a branch threshold is below its 
 - CLI tests prove exit codes 0, 1, 2, and 3.
 - Security scans complete with no unapproved findings.
 - The final demo shows validation, check, incident, notification, report, purge, and logs.
+- All four local acceptance cases pass with saved command/JSON/SQLite evidence. CI and the grading gates enforce them; no frontend coverage or deliverable exists.
 
 [Back to README](../README.md)

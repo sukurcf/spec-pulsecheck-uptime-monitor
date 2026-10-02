@@ -6,6 +6,8 @@ Purpose: This document defines the PulseCheck command-line interface and targets
 
 The console entry point is `pulsecheck`. Commands use Typer. All commands MUST validate the targets file before they use it, except `init` and commands that only show help.
 
+All output is text/table, Markdown, JSON, or Should CSV. No frontend/report page or dashboard command exists. [Document 06](06-tech-stack-and-setup.md#local-operation-contract) defines the canonical `make local-start`, `make local-demo`, and `make local-stop` entrypoints; the examples below describe CLI contracts, not a running implementation.
+
 ```text
 $ pulsecheck --help
 Usage: pulsecheck [OPTIONS] COMMAND [ARGS]...
@@ -45,7 +47,7 @@ Commands:
 
 ## Targets file format
 
-The targets file is YAML. It is a product interface that students and users write directly.
+The targets file is YAML. It is a product interface that students and users write directly. This is a live-mode example: the fictional websites need external network access and are not guaranteed to exist. Local training MUST explicitly use the separate `targets.local.yml` described in document 06, with `local-api` at `http://127.0.0.1:8765/healthy` and `local-tls` at `https://localhost:8766/healthy`, prepared trusted certificates, and no external webhook. Never silently replace a failed live request with a fixture.
 
 ```yaml
 global:
@@ -78,7 +80,7 @@ targets:
     expected_status_codes: [200, 204]
     tags: [public, api]
   - name: local-status
-    url: http://localhost:8080/status
+    url: http://status.example.in/status
     method: GET
     expected_status_codes: [200]
     interval_seconds: 120
@@ -343,7 +345,8 @@ Arguments: none.
 | `--target <name>` | string | none | Report one target. |
 | `--since <datetime>` | ISO 8601 datetime | required | Inclusive lower bound. |
 | `--until <datetime>` | ISO 8601 datetime | current time | Exclusive upper bound. |
-| `--format <format>` | enum | `markdown` | `markdown`, `json`, or Should `csv` and `html`. |
+| `--format <format>` | enum | `markdown` | `markdown`, `json`, or Should `csv`. |
+| `--group-by <group>` | enum | `none` | Should: `none` or `tag`; use tags in the selected configuration, with `untagged` for no tags. |
 | `--output <path>` | path | stdout | Write report to a file. |
 
 Exit codes: 0 for successful report; 2 for invalid period or output path; 3 for internal errors.
@@ -472,6 +475,12 @@ All output uses these status values:
 
 Error kind values are `connection`, `dns`, `tls`, `timeout`, `status`, `keyword`, `hostname`, and `internal`.
 
+## Optional command: `replay`
+
+FR-REPLAY-01 MAY add `pulsecheck --config targets.local.yml --database .local/replay.db replay --input tests/fixtures/recorded-local.json`. `--input` is required; the explicitly selected database MUST be fresh and isolated. Reject an existing/runtime destination with exit 2 and `replay-database-not-fresh`. Validate final status, timestamp order, unique result IDs, target names, and attempt range before writing any rows.
+
+No HTTP/TLS checks or webhook/SMTP delivery occur during replay. Process recorded final outcomes through the incident engine/outbox and validate unique channel/dedupe keys. The document 06 seed MUST yield `replay valid: checks=5 closed_incidents=1 notification_keys=2`, exit 0. Bad status/time data yields `replay-invalid`, exit 2, with no rows written; repository failures exit 3. Replay is validation, never a live-check fallback.
+
 ## Webhook notification payload
 
 The webhook channel sends one JSON POST. The URL comes from an environment variable, not from the sample file. The `global.webhook_format` value selects the body shape:
@@ -525,7 +534,8 @@ Required fields:
 
 | Name | Required | Used by | Description |
 |---|---|---|---|
-| `PULSECHECK_WEBHOOK_URL` | yes for webhook | webhook notifier | Slack-compatible or Discord incoming webhook URL. |
+| `PULSECHECK_WEBHOOK_URL` | yes for webhook | webhook notifier | Local `http://127.0.0.1:8767/events` for training; external generic/Slack/Discord destination is opt-in. |
+| `SSL_CERT_FILE` | yes for local TLS | HTTP client and SSL evaluator | Ignored `.local/tls/ca.pem`; explicitly trust the prepared test CA without disabling verification. |
 | `PULSECHECK_SMTP_HOST` | Should | SMTP notifier | SMTP host for Should e-mail support. |
 | `PULSECHECK_SMTP_USERNAME` | Should | SMTP notifier | SMTP username. |
 | `PULSECHECK_SMTP_PASSWORD` | Should | SMTP notifier | SMTP password. Must be redacted. |

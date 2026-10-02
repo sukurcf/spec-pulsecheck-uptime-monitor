@@ -51,6 +51,9 @@ Purpose: This document defines PulseCheck terms and lists verified official docu
 | Exit code | Process result number used by cron and CI. |
 | Lite profile | 8 GB laptop setup that runs all Must features without Docker. |
 | TestPyPI | Test package registry used before real Python package publishing. |
+| Local fixture mode | Explicit localhost HTTP/TLS/webhook targets after dependency/certificate preparation; never a live-failure fallback. |
+| Recorded replay | Offline Python validation of final-result/incident/outbox invariants in an isolated database. |
+| Tag statistics | Python-computed report groups using tags from the current targets YAML. |
 
 ## Official documentation links
 
@@ -68,7 +71,6 @@ These URLs were checked on 2026-10-02. Use official documentation or official pr
 | PyYAML | <https://pyyaml.org/wiki/PyYAMLDocumentation> |
 | sqlite3 | <https://docs.python.org/3.12/library/sqlite3.html> |
 | ssl | <https://docs.python.org/3.12/library/ssl.html> |
-| Jinja2 | <https://jinja.palletsprojects.com/> |
 | pytest | <https://docs.pytest.org/> |
 | pytest-asyncio | <https://pytest-asyncio.readthedocs.io/> |
 | AnyIO | <https://anyio.readthedocs.io/> |
@@ -87,8 +89,6 @@ These URLs were checked on 2026-10-02. Use official documentation or official pr
 | Mailpit | <https://mailpit.axllent.org/> |
 | GitHub Actions | <https://docs.github.com/en/actions> |
 | PyPI trusted publishing | <https://docs.pypi.org/trusted-publishers/> |
-| MkDocs | <https://www.mkdocs.org/> |
-| MkDocs Material | <https://squidfunk.github.io/mkdocs-material/> |
 | pipx | <https://pipx.pypa.io/> |
 | Trivy | <https://trivy.dev/> |
 | Keep a Changelog | <https://keepachangelog.com/> |
@@ -124,6 +124,6 @@ These URLs were checked on 2026-10-02. Use official documentation or official pr
 7. Read sqlite3 and transaction docs before storing incidents.
 8. Read ssl and trustme docs before SSL warnings.
 9. Read pytest, mypy, Ruff, and coverage docs before making CI required.
-10. Read Docker, Mailpit, TestPyPI, and MkDocs only after Must scope is green.
+10. Read Python CSV/reporting, optional Docker/Mailpit, and TestPyPI after Must/local acceptance is green. Read Markdown documentation locally; no report pages, frontend, documentation-site publication, or cloud exercises remain.
 
 [Back to README](../README.md)

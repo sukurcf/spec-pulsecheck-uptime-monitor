@@ -16,9 +16,9 @@ flowchart LR
     Cron["Cron or CI pipeline"] --> CLI
     CLI --> Targets["targets.yml"]
     CLI --> SQLite["Local SQLite database"]
-    CLI --> Sites["Websites and APIs"]
+    CLI --> Sites["Local HTTP/TLS fixtures or opt-in live websites"]
     CLI --> Console["Console notifications"]
-    CLI --> Webhook["Slack-compatible or Discord webhook"]
+    CLI --> Webhook["Local receiver or opt-in external webhook"]
     CLI --> Logs["Text or JSON logs"]
 ```
 
@@ -28,6 +28,7 @@ Context notes:
 - SQLite stores evidence, not configuration ownership.
 - External webhooks are optional notification destinations.
 - Cron and CI use documented exit codes for automation.
+- Local training uses explicit fixture configuration, never a fallback after live failures. No frontend component exists.
 
 ## Component view
 
@@ -68,6 +69,7 @@ Component responsibilities:
 | Notification dispatcher | Send console and webhook notifications with stable IDs. | FR-NOTIF-01, FR-NOTIF-02 |
 | Reporter | Compute uptime, p95, incident count, missed checks, and MTTR. | FR-REPORT-01, FR-REPORT-02, FR-REPORT-03 |
 | Logging and redaction | Emit useful text or JSON logs and hide secrets. | FR-OBS-01, NFR-SEC-02 |
+| Local operation entrypoints | Start/stop fixtures and scheduler, migrate/seed SQLite, and prove offline persistence. | FR-LOCAL-01, BR-22 |
 
 ## Key sequences
 
@@ -180,8 +182,8 @@ PulseCheck MUST run without mandatory containers. Docker is a Should item for th
 
 | Profile | Hardware | Required local services | Behaviour |
 |---|---|---|---|
-| Lite | 8 GB RAM, 4 CPU cores recommended | Python, uv, SQLite file | All Must CLI commands run locally. Performance test still uses 200 local targets. |
-| Standard | 16 GB RAM, 4 or more CPU cores | Python, uv, SQLite file, optional Docker Compose | Should items can add Mailpit and a local HTTP test target. |
+| Lite | 8 GB RAM, 4 CPU cores, 2 GB free disk | Python, uv, SQLite bind directory, HTTP/TLS/webhook fixtures | `make local-start`/`make local-stop`; 200-target performance gate requires recorded verification. |
+| Standard | 16 GB RAM, 4 or more CPU cores, 5 GB free disk | Same plus optional Docker Compose | Should items can add local Mailpit; no frontend work. |
 
 Windows WSL2 recommendations:
 
@@ -190,7 +192,7 @@ Windows WSL2 recommendations:
 | 8 GB | 4GB | 4GB | Use the lite profile and avoid optional Compose during Must work. |
 | 16 GB | 8GB | 4GB | Standard profile can run Mailpit and one local test target. |
 
-Trainer pre-check: before week 1, the trainer MUST run the lite profile on an 8 GB laptop.
+Trainer pre-check: before week 1, the trainer MUST verify the proposed budgets and TC-LOCAL-001 through TC-LOCAL-004 on an 8 GB laptop. Document 06 owns ports 8765/8766/8767, certificate preparation, seed/demo, ignored `.local/` persistence, and reset confirmation; no app has been measured by this spec.
 
 ## Expected student repository tree
 
@@ -221,6 +223,8 @@ pulsecheck/
     adr/
       ADR-001-record.md
   scripts/
+  Makefile
+  targets.local.yml
   .github/
     workflows/
   targets.example.yml

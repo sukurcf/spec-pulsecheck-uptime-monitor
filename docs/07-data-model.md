@@ -222,7 +222,7 @@ The fields below are requirements for the YAML product interface. Document `08-c
 | `notification_channel` | `console`, `webhook`, `smtp` |
 | `notification_status` | `pending`, `sent`, `failed`, `suppressed` |
 | `webhook_format` | `generic`, `slack`, `discord` |
-| `output_format` | `table`, `json`, `markdown`, `csv`, `html` |
+| `output_format` | `table`, `json`, `markdown`, `csv` (Should) |
 
 ## Sample rows
 
@@ -268,5 +268,11 @@ Purge output MUST report row counts for `check_results`, `missed_checks`, `ssl_c
 Schema versioning MUST use the `schema_version` table. Each schema change MUST have a migration note in the student CHANGELOG. Migrations MUST be idempotent and safe to run once during startup.
 
 If migration fails, PulseCheck MUST stop the command, print `Internal error: database migration failed`, and exit 3. The tool MUST NOT silently delete or recreate a user's database.
+
+## Local seed and persistence
+
+FR-LOCAL-01 uses ignored `.local/pulsecheck.db` for runtime evidence and `.local/demo.db` for the fixed five-result fictional seed in document 06. Apply the same migrations to both before seeding/reading; initialize the demo once through repository/incident logic with recorded timestamps. The seed contains 5 final checks, 1 closed incident with duration 180 seconds, and 2 sent console notifications. Normal live checks never substitute these rows for a failed request.
+
+Stop/start MUST retain stable check/incident/notification IDs, pending/failed outbox state, cooldown keys, and SSL threshold keys. A reset deletes only project-local data after explicit confirmation while stopped. Optional replay requires a fresh isolated database and leaves runtime/demo data unchanged. Tag-group report statistics use tags from the current selected YAML file, not a new target table or a historical tag claim.
 
 [Back to README](../README.md)

@@ -19,7 +19,7 @@ Purpose: This document defines PulseCheck users, personas, permissions, journeys
 | Asha Nair | Developer | Keep targets valid and ship a tested CLI. | YAML mistakes can cause wrong checks. | Medium |
 | Rohan Patil | On-call engineer | Know if the fee portal is down before users call. | Duplicate alerts waste time during long incidents. | Medium |
 | Meera Iyer | Team lead | Read weekly uptime and MTTR in a short report. | Manual incident notes are incomplete. | Low |
-| Kabir Khan | Site owner | Renew certificates before browser warnings appear. | He does not know TLS commands. | Low |
+| Kabir Khan | Site owner | Renew certificates before clients reject them. | He does not know TLS commands. | Low |
 
 ## Permission matrix
 
@@ -93,11 +93,13 @@ flowchart LR
 | US-10 | As a team lead, I want status, history, and reports, so that I can discuss uptime with evidence. | Must | FR-CLI-05, FR-CLI-06, FR-CLI-07, FR-REPORT-01, FR-REPORT-02, FR-REPORT-03 |
 | US-11 | As a developer, I want logging controls and package installation, so that the tool is usable in a terminal and automation. | Must | FR-OBS-01, FR-PKG-01 |
 | US-12 | As an on-call engineer, I want SMTP alerts and maintenance windows, so that planned work does not create noisy alerts. | Should | FR-NOTIF-03, FR-SCHED-03 |
-| US-13 | As a team lead, I want CSV and HTML reports, so that reports can be shared without running the CLI. | Should | FR-REPORT-04, FR-REPORT-05 |
+| US-13 | As a team lead, I want CSV exports and Python-computed tag statistics, so that availability evidence can be shared without a frontend. | Should | FR-REPORT-04, FR-REPORT-05 |
 | US-14 | As a junior SRE, I want optional metrics and extra check types, so that I can extend PulseCheck after the MVP. | Could | FR-MET-01, FR-CHECK-04 |
+| US-15 | As a developer, I want local fixtures, seed data, and start/stop commands, so that training works without external network access after setup. | Must | FR-LOCAL-01 |
+| US-16 | As a developer, I want to validate recorded-result replays, so that incident and notification invariants can be checked without network I/O. | Could | FR-REPLAY-01 |
 
 ## Story coverage of Must FRs
 
-US-01 through US-11 cover every Must FR. Each linked Must FR MUST have at least one test case in `09-testing-strategy-and-test-cases.md`. Should stories do not block the final grade. Could stories are the only stories that can earn bonus points.
+US-01 through US-11 and US-15 cover every Must FR. Each linked Must FR MUST have at least one test case in `09-testing-strategy-and-test-cases.md`. Should stories do not block the final grade. Could stories are the only stories that can earn bonus points. All roles use CLI commands and reports; no role builds or needs a frontend.
 
 [Back to README](../README.md)

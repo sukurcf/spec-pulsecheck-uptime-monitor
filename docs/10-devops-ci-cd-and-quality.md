@@ -52,6 +52,7 @@ Each PR MUST answer these PulseCheck questions.
 - Are webhook URLs, SMTP passwords, and secret headers absent from logs and commits?
 - Does the CLI still return exit statuses 0, 1, 2, and 3 correctly?
 - Did the README or CLI help change if user behaviour changed?
+- Did TC-LOCAL-001 through TC-LOCAL-004 pass with prepared HTTP/TLS fixtures, no external egress, and saved persistence/failure evidence?
 - Did the student describe significant AI help in the PR description?
 
 ## Branch protection
@@ -61,7 +62,7 @@ Each PR MUST answer these PulseCheck questions.
 | Rule | Required setting |
 |---|---|
 | Pull request required | Yes, for every change. |
-| Required status checks | Lint, type check, tests with coverage, security scan, and build check. |
+| Required status checks | Lint, type check, tests with coverage, local acceptance, security scan, and build check. |
 | Branch up to date | Required before merge. |
 | Conversation resolution | Required. |
 | Secret scanning | Required through Gitleaks and GitHub alerts when available. |
@@ -94,14 +95,15 @@ Each PR MUST answer these PulseCheck questions.
 | Lint and format | Pull request and push to `main` | Run Ruff format check and Ruff lint. | Fails on formatting drift or lint violations. |
 | Type check | Pull request and push to `main` | Run `mypy --strict` on the core package. | Fails on any type error in application modules. |
 | Unit and integration tests | Pull request and push to `main` | Run pytest with SQLite files, Typer CLI tests, httpx mocks, local HTTP server, and trustme TLS tests. | Fails on a test failure or coverage below gates. |
+| Local acceptance | Pull request and push to `main` | Prepare dependencies, make/shell tooling, and trustme fixtures, then deny external egress while allowing loopback. Run `uv run --offline pytest -m local` for TC-LOCAL-001 to TC-LOCAL-004; save command logs, JSON reports, and SQLite ID assertions. | Fails on startup/demo mismatch, lost data/outbox IDs, unclear failures, or external network use. Ubuntu verifies actual make entrypoints; portable local cases run in every matrix cell. WSL2/macOS trainer evidence supplements CI. |
 | Performance smoke | Pull request and push to `main` | Check 200 local targets with concurrency 50 and 100 ms delay. | Fails if the measured check phase is 10 seconds or more. |
 | Security scan | Pull request and push to `main` | Run pip-audit and Gitleaks. | Fails on vulnerable dependencies or committed secrets. |
 | Docker build | Pull request and push to `main`; Should once Docker exists | Build the pinned Docker image for `pulsecheck run`. | Fails if the image cannot start `pulsecheck --help`. |
 | Docker scan | Pull request and push to `main`; Should once Docker exists | Run Trivy against the built image. | Fails on unaccepted high or critical findings. |
 | TestPyPI publish | Version tag only; Should | Use trusted publishing to upload package to TestPyPI. | Fails if metadata, build, or trusted publisher config is invalid. |
-| MkDocs deploy | Push to `main` or version tag; Should | Build MkDocs Material site and publish to GitHub Pages. | Fails on broken internal docs links or build errors. |
+| Markdown CLI guide verification | Pull request and push to `main`; Should | Compare local guide examples with CLI help/version and output snapshots. No site build/publication. | Fails on a documented command/output mismatch or broken local Markdown link. |
 
-The required CI matrix is Python 3.12.x and 3.13.x on Ubuntu and Windows. macOS smoke testing is Should.
+The required CI matrix is Python 3.12.x and 3.13.x on Ubuntu and Windows. WSL2/macOS start/stop evidence is required in trainer pre-check. Hosted runners, initial downloads, dependency scans, and publishing need internet; the local acceptance phase and local startup do not. No frontend coverage or cloud deployment job exists.
 
 The SIGTERM subprocess test MUST run on Ubuntu only. Windows CI MUST cover graceful shutdown with Ctrl+C and KeyboardInterrupt. Portable unit, integration, and CLI tests MUST run in all four matrix cells.
 
@@ -120,6 +122,7 @@ Docker is a Should item for this CLI project. The Must scope MUST work without D
 | Compose services | PulseCheck, Mailpit, and one local HTTP test target. |
 | Compose limits | Standard profile runs all services. Lite profile runs no mandatory Docker services. |
 | Health check | The container can show `pulsecheck --help` or validate the mounted config. |
+| Local ports and persistence | Preserve the document 06 fixture addresses; bind all published ports to loopback. Mailpit host SMTP/API are 1125/8125. Mount ignored `.local/` for SQLite. Optional Compose must not start alongside conflicting Python fixture listeners. |
 
 ## Configuration and secrets
 
@@ -133,13 +136,15 @@ Create a committed `.env.example` with names only. Do not commit `.env`.
 | `PULSECHECK_LOG_FORMAT` | `text` | `text` or `json` logs. | No |
 | `PULSECHECK_WEBHOOK_URL` | `https://example.com/webhook` | Generic Slack-compatible or Discord webhook URL. | Yes |
 | `PULSECHECK_SMTP_HOST` | `localhost` | SMTP server host for Should notifier. | No |
-| `PULSECHECK_SMTP_PORT` | `1025` | SMTP server port for Mailpit. | No |
+| `PULSECHECK_SMTP_PORT` | `1125` | Loopback host SMTP port for optional Mailpit (container port 1025). | No |
 | `PULSECHECK_SMTP_USERNAME` | `pulsecheck-user` | SMTP username when needed. | Yes |
 | `PULSECHECK_SMTP_PASSWORD` | `replace-me` | SMTP password when needed. | Yes |
 | `PULSECHECK_NOTIFICATION_FROM` | `pulsecheck@example.in` | Sender address for SMTP messages. | No |
 | `PULSECHECK_TIMEZONE` | `Asia/Kolkata` | Display time zone for reports. | No |
 
 Secret values MUST be read from environment variables or ignored local files. Secret values MUST be redacted in logs, reports, and exception messages.
+
+Local entrypoints override configuration with `targets.local.yml`, database `.local/pulsecheck.db`, and the prepared CA bundle via `SSL_CERT_FILE`. Use `.local/demo.db` only for the recorded seed report. Runtime must not fetch dependencies or require GitHub/TestPyPI/external webhook credentials. Live mode uses its configured URLs and fails normally, without fixture fallback.
 
 ## Versioning and release
 
@@ -177,5 +182,6 @@ A PulseCheck story is done only when all matching items are true.
 - The README or user docs explain changed commands or options.
 - The PR checklist is complete.
 - The Friday demo can show the behaviour from a clean clone.
+- `make local-start`, `make local-demo`, and `make local-stop` meet document 06; all four local cases pass, reset needs confirmation, and no frontend/site/cloud deliverable is introduced.
 
 [Back to README](../README.md)

@@ -31,17 +31,18 @@ Purpose: This document defines PulseCheck functional requirements, business rule
 | FR-NOTIF-02 | Notification de-duplication | Must | On-call engineer | BR-15 |
 | FR-OBS-01 | Logging controls | Must | Developer, System actor | BR-18 |
 | FR-PKG-01 | Installable package | Must | Developer | BR-19 |
+| FR-LOCAL-01 | Local operation contract | Must | Developer, System actor | BR-22 |
 | FR-REPORT-01 | Human table output | Must | On-call engineer, Team lead | BR-20 |
 | FR-REPORT-02 | Uptime report metrics | Must | Team lead | BR-09, BR-10, BR-11 |
 | FR-REPORT-03 | Missed check reporting | Must | Team lead | BR-09 |
 | FR-NOTIF-03 | SMTP notifier | Should | On-call engineer | BR-15 |
 | FR-REPORT-04 | CSV output | Should | Team lead | BR-20 |
-| FR-REPORT-05 | HTML status page | Should | Team lead | BR-20 |
+| FR-REPORT-05 | Report statistics by tag | Should | Team lead | BR-09, BR-10, BR-20 |
 | FR-SSL-03 | SSL issuer and subject | Should | Site owner | BR-13 |
 | FR-OPS-01 | Docker run image | Should | Developer | BR-21 |
 | FR-SCHED-03 | Maintenance windows | Should | On-call engineer | BR-15 |
-| FR-DOC-01 | Documentation site | Should | Developer | BR-19 |
-| FR-UI-01 | Terminal dashboard | Could | On-call engineer | BR-04 |
+| FR-DOC-01 | Offline Markdown CLI usage guide | Should | Developer | BR-19 |
+| FR-REPLAY-01 | Recorded-result replay validation | Could | Developer | BR-07, BR-08, BR-15 |
 | FR-MET-01 | Prometheus metrics | Could | Junior SRE | BR-09 |
 | FR-CHECK-04 | TCP and DNS checks | Could | Junior SRE | BR-04 |
 | FR-NOTIF-04 | Telegram notifier | Could | On-call engineer | BR-15 |
@@ -76,7 +77,7 @@ Acceptance criteria:
 
 Priority: Must. Roles: Developer, Site owner. Linked rules: BR-01.
 
-The `init` command MUST write a sample targets file. The command MUST refuse to overwrite an existing file unless the user passes `--force`. The sample MUST use only `example.in` hostnames and safe placeholder webhook values.
+The `init` command MUST write a sample targets file. The command MUST refuse to overwrite an existing file unless the user passes `--force`. The default sample MUST use only fictional `example.in` hostnames and safe placeholder webhook values. These website URLs are live-mode configuration examples, not guaranteed available/offline targets. Local training MUST explicitly select the separate localhost fixture configuration in document 06; failed live checks MUST NOT silently switch to it.
 
 Acceptance criteria:
 - Given no `targets.yml` file exists, when Asha runs `pulsecheck init --output targets.yml`, then PulseCheck writes the file and exits 0.
@@ -271,7 +272,7 @@ Acceptance criteria:
 - Given `https://www.example.in` has a valid certificate expiring in 20 days, when a check runs, then `ssl_certificate_observations.days_to_expiry` is 20.
 - Given a certificate SAN matches the target hostname but the subject CN differs, when SSL evaluation runs, then hostname validation passes.
 - Given a certificate SAN does not match the target hostname, when SSL evaluation runs, then the target is classified `DOWN` with error kind `tls` and no SSL observation is stored.
-- Given `http://localhost:8080`, when a check runs, then no SSL observation is stored.
+- Given local fixture `http://127.0.0.1:8765/healthy`, when a check runs, then no SSL observation is stored.
 
 ### FR-SSL-02 — SSL expiry warnings
 
@@ -332,6 +333,18 @@ Acceptance criteria:
 - Given a clean clone, when Asha runs the documented install command, then `pulsecheck --help` exits 0.
 - Given a tag release, when the package version is shown, then it follows SemVer format `MAJOR.MINOR.PATCH`.
 
+### FR-LOCAL-01 — Local operation contract
+
+Priority: Must. Roles: Developer, System actor. Linked rules: BR-22.
+
+Students MUST implement `make local-start`, `make local-stop`, and `make local-demo` as specified in document 06. Startup MUST validate prerequisites/ports, initialize SQLite migrations and fictional seed evidence once, start loopback HTTP/TLS/webhook fixtures, and start the local scheduler. Stop MUST preserve SQLite and outbox state. No external account or network is required at runtime after dependency/certificate preparation.
+
+Acceptance criteria:
+- Given a clean clone with dependencies cached, when `make local-start` runs, then it prints `local-ready targets=2`, both fixture health checks succeed, and the SQLite schema is current.
+- Given external egress is blocked but loopback is allowed, when `make local-demo` runs, then the fixed seed report has 5 checks, `40.00%` uptime, p95 `100 ms`, one closed incident, and MTTR `180 seconds`.
+- Given stored check IDs and a pending notification, when stop/start runs, then those IDs and the notification ID remain unchanged and pending delivery is retried.
+- Given port 8765 is occupied, when startup runs, then it exits 2 with `local-port-in-use: 8765`. Missing TLS fixtures exit 2 with `local-tls-fixture-missing`; neither case falls back to live websites.
+
 ### FR-REPORT-01 — Human table output
 
 Priority: Must. Roles: On-call engineer, Team lead. Linked rules: BR-20.
@@ -371,11 +384,11 @@ Acceptance criteria:
 
 Priority: Should. Roles: On-call engineer. Linked rules: BR-15.
 
-PulseCheck SHOULD send incident and SSL messages through SMTP. Mailpit SHOULD be used for local development tests.
+PulseCheck SHOULD send incident and SSL messages through SMTP. Use Mailpit at loopback SMTP port 1125 for local tests without authentication; its internal container port is 1025. Inspect e-mail through the HTTP API at 8125 or an unmodified built-in operations console. No frontend is implemented.
 
 Acceptance criteria:
-- Given Mailpit SMTP settings, when an incident opens, then one e-mail is visible in Mailpit with subject `[PulseCheck] incident opened: fee-portal`.
-- Given SMTP credentials are missing, when validation runs, then SMTP is disabled with a clear warning and Must channels still work.
+- Given local unauthenticated Mailpit settings, when an incident opens, then its API returns one e-mail with subject `[PulseCheck] incident opened: fee-portal`.
+- Given SMTP authentication is requested with a username but the password is missing, when validation runs, then SMTP is disabled with a clear warning and Must channels still work.
 
 ### FR-REPORT-04 — CSV output
 
@@ -387,14 +400,14 @@ Acceptance criteria:
 - Given three stored rows, when `history --format csv` runs, then the first line is `target_name,checked_at,status,latency_ms,attempt_count,error_kind`.
 - Given a target name contains a comma, when CSV output runs, then the field is quoted correctly.
 
-### FR-REPORT-05 — HTML status page
+### FR-REPORT-05 — Report statistics by tag
 
-Priority: Should. Roles: Team lead. Linked rules: BR-20.
+Priority: Should. Roles: Team lead. Linked rules: BR-09, BR-10, BR-20.
 
-The report command SHOULD render a static HTML status page with Jinja2. The file MUST not require JavaScript.
+The report command SHOULD support `--group-by tag` for Markdown, JSON, or CSV. Compute completed checks, DOWN count, uptime, and nearest-rank p95 per tag in Python, using target names and tags in the selected YAML configuration at report time (not historical tag ownership). A multi-tag target contributes to each matching tag; totals across tags are not additive. Untagged targets use group `untagged`. Missed checks remain outside the uptime denominator.
 
 Acceptance criteria:
-- Given a weekly report, when `--format html --output status.html` runs, then the file contains uptime %, incident count, and generated timestamp.
+- Given tag `training` has two final response rows at 100 and 200 ms, one UP and one DOWN, when grouping runs, then `completed_checks=2`, `down_checks=1`, `uptime_percent=50.00`, and `p95_latency_ms=200`.
 - Given the output path parent does not exist, when the command runs, then it exits 2 with a path error.
 
 ### FR-SSL-03 — SSL issuer and subject
@@ -427,27 +440,27 @@ Acceptance criteria:
 - Given a target is in maintenance from 22:00 to 23:00 IST, when it is DOWN at 22:15 IST, then no incident notification is sent.
 - Given the target remains DOWN at 23:05 IST, when the window has ended, then the normal incident rules apply.
 
-### FR-DOC-01 — Documentation site
+### FR-DOC-01 — Offline Markdown CLI usage guide
 
 Priority: Should. Roles: Developer. Linked rules: BR-19.
 
-The student SHOULD publish user documentation with MkDocs Material on GitHub Pages.
+The student SHOULD write a Markdown CLI guide in the implementation repository. It MUST document local versus live checks, all output formats, exit codes, report formulas, start/stop/reset, and seed demonstration commands. It is read locally and is not published as a documentation site.
 
 Acceptance criteria:
-- Given the docs site is built locally, when links are checked, then CLI command pages have no broken internal links.
-- Given a release tag is created, when CI finishes, then the published site mentions the same package version.
+- Given the guide is read offline, when its examples use local fixtures, then documented commands and output snapshots agree with CLI tests.
+- Given a release tag is created, when the guide and `pulsecheck --version` are checked, then both name the same package version.
 
 ## Could requirements
 
-### FR-UI-01 — Terminal dashboard
+### FR-REPLAY-01 — Recorded-result replay validation
 
-Priority: Could. Roles: On-call engineer. Linked rules: BR-04.
+Priority: Could. Roles: Developer. Linked rules: BR-07, BR-08, BR-15.
 
-PulseCheck MAY include a Textual dashboard after all Must and Should items are complete. It MAY show current target state, open incidents, and SSL warnings.
+PulseCheck MAY provide `pulsecheck --database <isolated.db> replay --input <recorded.json>` to validate recorded final outcomes through the existing incident engine and notification outbox. It MUST require an explicitly supplied fresh destination, reject an existing/runtime database path, perform no network sends, and keep production TLS verification unchanged. This is an offline Python validation task, not a monitoring interface.
 
 Acceptance criteria:
-- Given three targets, when the dashboard opens, then each target has a text status label.
-- Given the terminal does not support the dashboard, when startup fails, then normal CLI commands still work.
+- Given the five recorded DOWN/DOWN/DOWN/UP/UP outcomes in document 06, when replay runs into a fresh isolated database, then output includes `replay valid: checks=5 closed_incidents=1 notification_keys=2`.
+- Given a replay has an invalid status or timestamps out of order, when it is validated, then exit is 2 with `replay-invalid` and no rows are written.
 
 ### FR-MET-01 — Prometheus metrics
 
@@ -458,6 +471,8 @@ PulseCheck MAY expose a local Prometheus metrics endpoint. It MUST be off by def
 Acceptance criteria:
 - Given metrics are enabled, when Prometheus scrapes the endpoint, then metrics include uptime result counts and check latency buckets.
 - Given metrics are disabled, when PulseCheck runs, then no HTTP listener is started.
+
+If enabled, the metrics listener MUST bind to `127.0.0.1:8768`; it is not a frontend deliverable.
 
 ### FR-CHECK-04 — TCP and DNS checks
 
@@ -511,9 +526,10 @@ Acceptance criteria:
 | BR-16 | Retention deletes only old evidence rows. | `purge --older-than <days>`; days at least 1. | FR-CLI-06, FR-STORE-02 |
 | BR-17 | Exit codes are fixed. | `check`, `status`, and `run`: 0 all evaluated targets UP, 1 DOWN, DEGRADED, or UNKNOWN; `init`, `validate`, `history`, `report`, and `purge`: 0 on command success; all commands: 2 config or usage, 3 internal. | FR-CLI-08 |
 | BR-18 | Logs expose operations but not secrets. | `--verbose`, `--quiet`, `--log-format json`; redact secret headers. | FR-OBS-01 |
-| BR-19 | Package is installable as `pulsecheck`. | Python 3.12.x baseline; CI also tests 3.13.x; SemVer. | FR-PKG-01, FR-DOC-01, FR-TEST-01 |
-| BR-20 | Output supports humans and automation. | Tables for humans; JSON for history/report; Markdown for report. | FR-REPORT-01, FR-REPORT-04, FR-REPORT-05 |
+| BR-19 | Package is installable as `pulsecheck`. | Python 3.12.x baseline; CI also tests 3.13.x; SemVer; local Markdown usage guide. | FR-PKG-01, FR-DOC-01, FR-TEST-01 |
+| BR-20 | Output supports humans and automation, without a frontend. | Tables/text for humans; JSON for history/report; Markdown for report; CSV Should; tag statistics Should. | FR-REPORT-01, FR-REPORT-04, FR-REPORT-05 |
 | BR-21 | Docker is optional for this CLI project. | Docker image and Compose are Should, not Must. | FR-OPS-01 |
+| BR-22 | Local training explicitly uses fixtures and preserves data. | Start/stop/demo in document 06; loopback ports 8765/8766/8767; reset requires `CONFIRM=DELETE_LOCAL_DATA`; live failures never select fixtures automatically. | FR-LOCAL-01 |
 
 ## Incident state machine
 

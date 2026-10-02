@@ -2,6 +2,8 @@
 
 Purpose: This document helps the student explain PulseCheck in interviews, prepare topic answers, improve profiles, and practise mock interviews.
 
+The answers below are templates for the implemented project, not claims that this specification has run. Replace performance claims with measured results. Explain backend/CLI-only scope, localhost HTTP/TLS fixtures, and `make local-start`/`make local-stop`; no frontend or public deployment is part of the portfolio.
+
 ## Explain your project in 2 minutes using STAR
 
 | STAR part | PulseCheck answer outline |
@@ -9,7 +11,7 @@ Purpose: This document helps the student explain PulseCheck in interviews, prepa
 | Situation | Small teams discover website downtime and SSL expiry too late. They need a free local monitor. |
 | Task | I built `pulsecheck`, an installable Python CLI for endpoint checks, incidents, alerts, and reports. |
 | Action | I used Typer, asyncio, httpx, Pydantic, sqlite3, TLS checks, notification plugins, and CI quality gates. |
-| Result | The tool checks 200 local targets under 10 seconds, stores evidence, opens incidents after 3 `DOWN` results, warns at 30/14/7 SSL days, and reports uptime, p95, missed checks, and MTTR. |
+| Result | After implementation, report the measured 200-target time and local acceptance results; show 3-DOWN/2-recovery incidents, 30/14/7 TLS warnings, uptime/p95/MTTR, and persisted offline operation. |
 
 A concise spoken version:
 
@@ -78,7 +80,9 @@ A concise spoken version:
 | 7. How does `purge` avoid deleting important incident data? | Deletes old check and SSL evidence; never deletes open incidents; reports row counts. |
 | 8. How would you add a Telegram notifier safely? | New plugin; token from env; no logs of token; tests for failure; ADR if architecture changes. |
 | 9. How do missed checks affect reports? | Reported separately; excluded from uptime denominator; indicate scheduler overload. |
-| 10. What would you improve after six weeks? | Better dashboard or Prometheus metrics; more notifier plugins; stronger documentation; measure real target load. |
+| 10. What would you improve after six weeks? | Python tag statistics/replay validation, Prometheus metrics, more notifier plugins, stronger CLI documentation, and measured target load; no frontend work. |
+| 11. Why do local tests work without internet but default website checks do not? | Explicit localhost config plus cached dependencies/cert fixtures; live URLs need network; no automatic replay/fixture fallback. |
+| 12. What survives local stop/start? | SQLite migrations/evidence, stable outbox IDs, cooldown and SSL threshold keys; reset deletes data only after explicit confirmation. |
 
 ## Fundamentals check
 
@@ -104,6 +108,8 @@ Know DNS, TCP, TLS, certificates, hostname validation, HTTP methods, status code
 
 ### Local tools mapped to AWS services
 
+Theory only: no AWS account, resource creation, or public/cloud deployment exercise is allowed.
+
 | Local PulseCheck tool | Similar AWS idea | Interview note |
 |---|---|---|
 | SQLite file | Amazon RDS or DynamoDB | Local persistence versus managed storage. |
@@ -112,7 +118,6 @@ Know DNS, TCP, TLS, certificates, hostname validation, HTTP methods, status code
 | Webhook notifier | SNS or EventBridge target | Alert delivery with retry and dedupe. |
 | Docker Compose | ECS task or local container stack | Reproducible runtime environment. |
 | GitHub Actions | CodeBuild or CodePipeline | Automated quality gates. |
-| MkDocs Pages | S3 static website or Amplify | Static documentation hosting. |
 
 ## Resume bullet templates
 
@@ -147,6 +152,7 @@ Know DNS, TCP, TLS, certificates, hostname validation, HTTP methods, status code
 - Explain one Windows CI problem and one Linux signal problem.
 - Show one failing validation example.
 - Explain why `mypy --strict` matters.
+- Reproduce the fixed seed report and distinguish its 100 ms recorded latencies from live measurements.
 - Admit one limitation and propose a safe improvement.
 
 [Back to README](../README.md)

@@ -11,7 +11,7 @@ If any gate fails, the result is **Rework required** for any score.
 | CI is green on `main` | GitHub Actions run passes for Python 3.12 and 3.13 on Ubuntu and Windows. |
 | Coverage thresholds are met | Whole package line coverage is at least 90%, and branch coverage is at least 80%. |
 | Pure-logic coverage is met | Classifier, incident engine, uptime calculator, p95 calculator, and SSL evaluator have 100% branch coverage. |
-| Clean-clone setup works | Trainer can follow README setup in 10 steps or fewer and run `pulsecheck --help`. |
+| Clean-clone local operation works | Trainer follows README/document 06 in 10 steps or fewer, then runs `make local-start`, exact local demo, and `make local-stop`. TC-LOCAL-001 to TC-LOCAL-004 pass without external egress after preparation, with persisted IDs and clear input/dependency failures. |
 | No secrets in Git history | Gitleaks and manual review find no webhook URLs, SMTP passwords, or tokens. |
 | Must commands work | `init`, `validate`, `check`, `run`, `status`, `history`, `report`, and `purge` exist. |
 | Student can explain code | Student explains and changes a selected module live during the viva. |
@@ -28,6 +28,8 @@ If any gate fails, the result is **Rework required** for any score.
 | Git and engineering practices (PRs, commits, issues) | 5 |
 | Final demo and viva | 15 |
 | **Total** | **100** |
+
+Version 1.1 removes frontend, report-page/site, and cloud-delivery assessment. The unchanged weights assess replacement Python report correctness, local fixtures/migrations/persistence, CI acceptance, and Markdown CLI documentation. Tag statistics remains Should, not an additional Must gate. The former UI bonus allocation is now 2 points for FR-REPLAY-01; there are no frontend alternatives or points.
 
 ## Category criteria
 
@@ -51,7 +53,7 @@ If any gate fails, the result is **Rework required** for any score.
 
 | Level | Criteria |
 |---|---|
-| Excellent | At least 45 concrete tests cover validation, CLI exit codes, retries, timeouts, HTTP server integration, TLS certificates, SQLite transactions, incidents, p95, purge, and notification cooldown. Performance test proves 200 targets under 10 seconds. |
+| Excellent | At least 45 concrete tests cover validation, exit codes, HTTP/TLS fixtures, SQLite transactions, incidents, p95, purge, and notification outbox/cooldown. All four local acceptance cases have offline/start-stop/error evidence. Measured performance proves 200 targets under 10 seconds. |
 | Good | Coverage gates pass and most Must behaviours are tested. A few tests rely on broad mocks or miss boundary values. |
 | Needs work | Coverage fails, tests use real internet services, pure logic lacks branch tests, or performance evidence is missing. |
 
@@ -60,14 +62,14 @@ If any gate fails, the result is **Rework required** for any score.
 | Level | Criteria |
 |---|---|
 | Excellent | CI matrix covers Python 3.12 and 3.13 on Ubuntu and Windows. uv lockfile is committed. Ruff, mypy, tests, coverage, pip-audit, and Gitleaks are required checks. Docker and Compose Should items use pinned tags if claimed. |
-| Good | Required CI gates pass, but Docker, TestPyPI, or MkDocs Should items are partial. Local setup is repeatable. |
+| Good | Required CI/local acceptance gates pass, but Docker, TestPyPI, or the Markdown CLI guide Should items are partial. Local setup is repeatable. |
 | Needs work | CI is flaky, matrix is incomplete, lockfile is missing, security scans are absent, or Docker uses `latest`. |
 
 ### Documentation — 10 points
 
 | Level | Criteria |
 |---|---|
-| Excellent | README setup works in 10 steps or fewer. CLI examples show exact commands, exit codes, and outputs. ADRs explain asyncio, sqlite3 repository, notification plugin, SSL method, and Docker choices. CHANGELOG matches tags. |
+| Excellent | README setup works in 10 steps or fewer, documents downloads versus offline runtime, fixed loopback ports, start/stop/reset, seed demo, persistence, failure codes, disk/RAM and consistent WSL guidance. CLI examples show exact commands and outputs. ADRs explain asyncio, SQLite, outbox, TLS, and optional Docker choices. CHANGELOG matches tags. |
 | Good | README and ADRs are useful but miss one operational detail, such as purge safety or environment variables. |
 | Needs work | README cannot set up the tool, ADRs are missing, or documentation contradicts implemented CLI behaviour. |
 
@@ -84,7 +86,7 @@ If any gate fails, the result is **Rework required** for any score.
 | Level | Criteria |
 |---|---|
 | Excellent | The 10-minute demo follows the script, uses realistic local targets, explains failures clearly, and leaves time for live code changes. Viva answers connect Python, asyncio, HTTP, TLS, SQL, Git, Linux, and packaging to PulseCheck. |
-| Good | Demo shows Must flows but runs slightly over time or needs prepared data for one flow. Viva answers are mostly correct. |
+| Good | Demo proves all Must/local flows but runs slightly over time. Prepared fictional seed/TLS fixtures are expected and identified as such; viva answers are mostly correct. |
 | Needs work | Demo cannot reproduce incidents or reports, student cannot explain their own modules, or answers rely on memorised text only. |
 
 ## Bonus rules
@@ -93,7 +95,7 @@ Bonus is at most +10 points. Bonus applies only when the base score is 60 or mor
 
 | Bonus item | Maximum points | Conditions |
 |---|---:|---|
-| FR-UI-01 Textual dashboard | 2 | Dashboard shows text status labels and does not break normal CLI commands. |
+| FR-REPLAY-01 Python replay validation | 2 | TC-CLI-021 proves the five-result incident/outbox invariants, rejects invalid input/runtime destinations, and performs no sends. |
 | FR-MET-01 Prometheus metrics | 2 | Metrics endpoint is disabled by default and exposes uptime counts when enabled. |
 | FR-CHECK-04 TCP and DNS checks | 2 | TCP and DNS target types work without changing HTTP target rules. |
 | FR-NOTIF-04 Telegram notifier | 2 | Telegram sends one incident message and keeps tokens out of logs. |

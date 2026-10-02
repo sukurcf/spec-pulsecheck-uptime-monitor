@@ -1,10 +1,10 @@
 # PulseCheck project overview
 
-Purpose: This document explains the PulseCheck problem, product vision, scope, constraints, and success measures for version 1.0.
+Purpose: This document explains the PulseCheck problem, product vision, scope, constraints, and success measures for version 1.1.
 
 ## Problem statement
 
-Small companies and college IT teams run websites, APIs, and portals without a paid monitoring service. They often learn about downtime from users. They also miss SSL certificate renewals until browsers show warnings. PulseCheck gives these teams a local command-line monitor that checks endpoints, stores evidence, detects incidents, sends alerts, and creates uptime reports.
+Small companies and college IT teams run websites, APIs, and portals without a paid monitoring service. They often learn about downtime from users. They also miss SSL renewals until clients reject expired certificates. PulseCheck gives these teams a local command-line monitor that checks endpoints, stores evidence, detects incidents, sends alerts, and creates uptime reports.
 
 ## Business context
 
@@ -32,7 +32,7 @@ PulseCheck MUST be a dependable local monitor for small teams. It MUST teach Pyt
 
 ## Non-goals and out of scope
 
-PulseCheck MUST NOT include multi-region probes, user accounts, a SaaS control plane, browser JavaScript checks, or SMS notifications. It MUST NOT store targets in SQLite. Targets live only in the YAML targets file because that file is a user-facing interface. Cloud deployment MAY be documented only as a Could item with a cost warning and a destroy-after-demo instruction.
+PulseCheck MUST NOT include multi-region probes, user accounts, a SaaS control plane, frontend work, terminal/web dashboards, report pages, documentation-site publication, SMS notifications, or cloud deployment exercises, even as optional work. It MUST NOT store targets in SQLite. Targets live only in the YAML targets file because that file is the CLI configuration interface. Reports are Markdown/text/JSON/CSV only.
 
 ## Scope by priority
 
@@ -50,20 +50,21 @@ PulseCheck MUST NOT include multi-region probes, user accounts, a SaaS control p
 - Console and generic webhook notification plugins.
 - Notification de-duplication and a default 30-minute cooldown.
 - Logging controls, documented exit codes, and Python package installation.
+- Local start/stop, migrations, fictional seed data, loopback HTTP/TLS/webhook fixtures, and offline acceptance after initial downloads (FR-LOCAL-01).
 
 ### Should scope after the MVP
 
 - SMTP e-mail notifier tested with Mailpit.
 - CSV history and report output.
-- Static HTML status page rendered with Jinja2.
+- Python report statistics grouped by tag.
 - SSL issuer and subject fields in output.
 - Docker image and Docker Compose demo with Mailpit and a local HTTP test target.
 - Maintenance windows that suppress alerts.
-- TestPyPI publishing and MkDocs documentation site.
+- TestPyPI publishing as a separate networked release exercise and a Markdown CLI usage guide.
 
 ### Could scope after all Must and Should work
 
-- Textual terminal dashboard or read-only web status page.
+- Python recorded-result replay validation with isolated SQLite evidence.
 - Prometheus metrics endpoint.
 - TCP port and DNS checks.
 - Telegram notifier.
@@ -77,12 +78,13 @@ PulseCheck MUST NOT include multi-region probes, user accounts, a SaaS control p
 - The trainer account is `@sukurcf`.
 - All mandatory tools are free and run locally.
 - The trainer validates the lite profile on an 8 GB laptop before week 1.
+- Initial dependency downloads and hosted CI/submission need internet. Local training/tests use prepared localhost HTTP/TLS fixtures; normal live website checks still require access to the configured websites.
 
 ## Constraints
 
 | Constraint | Requirement |
 |---|---|
-| Specification version | 1.0, dated 2026-10-02 |
+| Specification version | 1.1, dated 2026-10-02; v1.0 remains in the README release history |
 | Python baseline | Python 3.12.x |
 | CI Python versions | Python 3.12.x and 3.13.x |
 | CLI framework | Typer |
@@ -104,6 +106,7 @@ PulseCheck MUST NOT include multi-region probes, user accounts, a SaaS control p
 - Exit codes are exactly 0, 1, 2, and 3 for the documented conditions.
 - CI is green on `main`, coverage gates pass, and no secrets exist in Git history.
 - The final demo shows a DOWN incident, recovery, SSL warning, purge, and weekly report.
+- TC-LOCAL-001 through TC-LOCAL-004 prove startup, deterministic offline reporting/checks, persistence, and clear local dependency/input failures using the contract in document 06.
 
 ## Skills learned and job relevance
 

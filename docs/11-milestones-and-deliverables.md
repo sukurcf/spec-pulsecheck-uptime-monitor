@@ -6,9 +6,11 @@ Purpose: This document gives the 6-week plan, effort budget, Gantt view, deliver
 
 The plan uses about 178 hours. Must work is 118 hours, including 30 hours of learning and setup. No week plans more than 30 hours.
 
+Version 1.1 keeps this budget. Removed page/site work moves to Python tag statistics and an offline CLI guide within the 30-hour Should allocation; local fixture/start/stop acceptance is included in setup/storage/testing, not extra weeks. Recorded replay validation replaces the old UI stretch allocation.
+
 | Feature area | Priority | Hours | Main IDs |
 |---|---|---:|---|
-| Guided setup and Python CLI learning | Must | 30 | FR-PKG-01, FR-OBS-01 |
+| Guided setup, Python CLI learning, and local operations | Must | 30 | FR-PKG-01, FR-OBS-01, FR-LOCAL-01 |
 | Targets file and validation | Must | 12 | FR-CFG-01, FR-CFG-02, FR-CLI-01, FR-CLI-02 |
 | One-off async checks and classification | Must | 16 | FR-CLI-03, FR-CHECK-01, FR-CHECK-02, FR-CHECK-03 |
 | Scheduler and graceful shutdown | Must | 12 | FR-CLI-04, FR-SCHED-01, FR-SCHED-02 |
@@ -17,19 +19,19 @@ The plan uses about 178 hours. Must work is 118 hours, including 30 hours of lea
 | SSL checks and expiry warnings | Must | 9 | FR-SSL-01, FR-SSL-02 |
 | Notifications and cooldown | Must | 8 | FR-NOTIF-01, FR-NOTIF-02 |
 | Status, history, reports, logs, packaging | Must | 7 | FR-CLI-05, FR-CLI-06, FR-REPORT-01, FR-OBS-01, FR-PKG-01 |
-| SMTP, CSV, HTML, Docker, MkDocs, TestPyPI | Should | 30 | FR-NOTIF-03, FR-REPORT-04, FR-REPORT-05, FR-OPS-01, FR-DOC-01 |
+| SMTP, CSV/tag statistics, Docker, Markdown CLI guide, TestPyPI | Should | 30 | FR-NOTIF-03, FR-REPORT-04, FR-REPORT-05, FR-OPS-01, FR-DOC-01 |
 | Hardening, test gaps, demo, viva | Should | 22 | NFR-TEST-01, NFR-SEC-03, NFR-DOC-01 |
-| Shared stretch and contingency | Could | 8 | FR-UI-01, FR-MET-01, FR-CHECK-04, FR-NOTIF-04, FR-TEST-01 |
+| Python replay, shared stretch, and contingency | Could | 8 | FR-REPLAY-01, FR-MET-01, FR-CHECK-04, FR-NOTIF-04, FR-TEST-01 |
 
 ## Week-by-week plan
 
 | Week | Goals | Tasks with IDs | Deliverables | Friday demo checkpoint |
 |---|---|---|---|---|
-| 1 | Build the foundation and first vertical slice. | Spend 24 hours on guided setup and CLI learning. Spend 6 hours on config basics for FR-CFG-01 and FR-CLI-01. | Public `pulsecheck` repo, Projects board, README setup draft, sample targets file, first validation tests. | Show invalid `method: HEAD` plus `keyword` returning exit code 2. |
+| 1 | Build the foundation and first vertical slice. | Spend 24 hours on guided setup, local entrypoint/fixture contracts for FR-LOCAL-01, and CLI learning. Spend 6 hours on config basics for FR-CFG-01 and FR-CLI-01. | Public `pulsecheck` repo, Projects board, README setup draft, localhost HTTP/TLS fixture preparation, first validation tests. | Show invalid `method: HEAD` plus `keyword` returning exit code 2; explain local versus live mode. |
 | 2 | Complete config and one-off checking. | Spend 6 hours on remaining learning, 6 hours on validation for FR-CFG-02 and FR-CLI-02, and 16 hours on checks for FR-CLI-03, FR-CHECK-01, FR-CHECK-02, FR-CHECK-03. | `check` command, local HTTP tests, result table, exit code tests. | Show one `UP`, one `DEGRADED`, and one `DOWN` target in one run. |
 | 3 | Add storage, reports, and command coverage. | Spend 12 hours on storage and purge, 12 hours on incident and report logic, and 6 hours on `status`, `history`, `report`, logs, and packaging. | SQLite tables, repository tests, purge command, incident state tests, first report output. | Show three `DOWN` results opening an incident and purge preserving it. |
-| 4 | Finish Must runtime behaviour. | Spend 12 hours on scheduler and shutdown, 9 hours on SSL, 8 hours on notifications, and 1 hour on final CLI integration. | All Must commands, coverage gates, security scans, performance test. | Show scheduler, incident close after two non-DOWN results, SSL 14-day warning, and weekly report. |
-| 5 | Add Should items and harden. | Spend up to 18 hours on Should items and 12 hours on hardening after Must is green. | Mailpit demo, static status page, Docker run notes, docs site draft. | Show one Should feature and explain what remained out of scope. |
+| 4 | Finish Must runtime behaviour. | Spend 12 hours on scheduler/shutdown, 9 hours on SSL, 8 hours on notifications, and 1 hour on final CLI integration; complete FR-LOCAL-01 acceptance alongside these features. | All Must commands, TC-LOCAL-001 to TC-LOCAL-004 offline evidence, coverage/security gates, performance test. | Show local start/demo/stop, persisted restart, incident recovery, and SSL warning. |
+| 5 | Add Should items and harden. | Spend up to 18 hours on Should items and 12 hours on hardening after Must is green. | CSV/tag-statistics evidence, Mailpit API demo, Docker notes, Markdown CLI guide. | Show one Python/operations Should feature; no frontend alternative. |
 | 6 | Polish portfolio and prepare viva. | Spend 12 hours on remaining Should items, 10 hours on hardening and demo, and up to 8 hours on Could stretch or contingency. | Final repository, coverage report, ADRs, CHANGELOG, 5-minute video, final demo script. | Run the final 10-minute demo and answer viva questions. |
 
 ## Gantt chart
@@ -66,6 +68,8 @@ gantt
 - README with clean-clone setup in 10 steps or fewer.
 - Architecture diagram and at least 5 ADRs in the student repository.
 - Working commands: `init`, `validate`, `check`, `run`, `status`, `history`, `report`, and `purge`.
+- Document 06 contract: `make local-start`, `make local-demo`, `make local-stop`, fictional seed/migrations, loopback ports, ignored persistent data, confirmed reset, and clear unavailable-dependency errors.
+- Saved TC-LOCAL-001 to TC-LOCAL-004 evidence with external egress denied after downloads/certificate preparation; trainer resource pre-check labels proposed versus measured limits.
 - Tests for at least 45 concrete cases.
 - Coverage report showing at least 90% line and 80% branch coverage.
 - 100% branch coverage evidence for pure-logic modules.
@@ -93,15 +97,15 @@ gantt
 | Minute | What to show |
 |---:|---|
 | 0 | State the problem: local uptime, SSL warnings, incidents, and reports for small teams. |
-| 1 | Show the repository, README setup, CI badge, and branch history. |
+| 1 | Show README/CI, then `make local-start` with prepared fixtures and no external egress; show ports 8765/8766/8767 health. |
 | 2 | Run `pulsecheck validate` on a valid targets file and one invalid file. |
 | 3 | Run `pulsecheck check` with `UP`, `DEGRADED`, and `DOWN` outputs. |
 | 4 | Show retry count, exact exit code 1, and a stored SQLite result through `history`. |
 | 5 | Run or replay scheduler evidence that opens an incident after 3 `DOWN` results. |
 | 6 | Show recovery after 2 non-`DOWN` results and explain MTTR. |
 | 7 | Show an SSL expiry warning at 14 days and explain hostname match. |
-| 8 | Run `report` and explain uptime formula, p95 nearest-rank, missed checks, and MTTR. |
-| 9 | Show tests, coverage gates, mypy strict, Ruff, pip-audit, Gitleaks, and one ADR. |
+| 8 | Run `make local-demo`; show the exact five-check seed report (40.00%, p95 100 ms, MTTR 180 seconds) and distinguish recorded from live timing. |
+| 9 | Show `make local-stop`/restart preserving IDs, invalid-input/dependency errors, local acceptance, coverage, and one ADR. Hosted scan evidence was prepared online. |
 | 10 | Answer one viva question and state one improvement you would do next. |
 
 [Back to README](../README.md)
