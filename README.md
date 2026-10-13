@@ -1,114 +1,73 @@
-# PulseCheck uptime and SSL monitor
+# CSV Scout
 
-A backend-only Python CLI project that checks HTTP/TLS endpoints, detects incidents, sends notifications, and exports Markdown, text, JSON, or CSV uptime evidence. Students MUST NOT build a frontend, terminal dashboard, report page, or documentation site, including bonus work.
+CSV Scout is a five-day Python project for entry-level data engineers. It reads one fictional orders CSV, profiles its data, validates each row, and writes a JSON report plus a quarantine CSV.
 
-This repository contains specifications only: exactly 15 Markdown documents, not an implementation. [Document 06](docs/06-tech-stack-and-setup.md#local-operation-contract) defines the local operation contract students MUST implement: `make local-start`, `make local-demo`, and `make local-stop`. Local training uses HTTP `127.0.0.1:8765`, TLS `localhost:8766`, and webhook `127.0.0.1:8767` fixtures after initial downloads and certificate preparation. Default website checks in live mode still need network access; there is no silent offline fallback. No cloud account, public hostname, or API key is needed locally.
+> This repository contains specifications only. It does not contain an application. Students implement the CLI in their own repository.
 
 ## Quick facts
 
 | Item | Value |
 |---|---|
-| Track | Python Core with SRE and production-support flavour |
-| Difficulty | ★★★☆☆ Intermediate |
-| Duration | 6 weeks, about 180 hours |
-| Target job roles | Python Developer, Automation Engineer, Junior SRE, Production Support Engineer |
-| Key skills | Python packaging, Typer, asyncio, httpx, Pydantic, SQLite, TLS, pytest, mypy, GitHub Actions |
-| Prerequisites | Basic Python, basic SQL, Git basics, and terminal basics |
-| Minimum hardware | 8 GB RAM, 4 cores, 2 GB free disk in the Lite profile |
-| Recommended hardware | 16 GB RAM, 4 or more cores, 5 GB free disk for optional local support services |
-| WSL2 memory/swap | 8 GB host: 4 GB/4 GB; 16 GB host: 8 GB/4 GB |
-| Student repository name | `pulsecheck` |
+| Target role | Junior Python Data Engineer |
+| Duration | 5 days × 6 hours = 30 hours |
+| Required runtime | Python 3.12.x standard library |
+| CLI | `argparse` |
+| Tests | `pytest` |
+| Input | One fictional `orders.csv`, at most 500 data rows |
+| Outputs | Stable JSON report and quarantine CSV |
+| Local services | None |
 
-## What you will build
+## Goal
 
-- An installable CLI package with the console command `pulsecheck`.
-- A YAML targets file with strict validation and clear error messages.
-- Concurrent HTTP and HTTPS checks with timeouts, retries, and jitter.
-- Exact result states: `UP`, `DEGRADED`, `DOWN`, and display-only `UNKNOWN`.
-- A scheduler that respects each target interval and shuts down safely.
-- SQLite storage for final check results, incidents, SSL observations, and notifications.
-- Incident rules that open after 3 consecutive `DOWN` results and close after 2 non-`DOWN` results.
-- SSL expiry and hostname checks with 30, 14, and 7 day warnings.
-- Console and webhook notifications with de-duplication and cooldown.
-- Uptime, p95 latency, missed check, incident, and MTTR reports.
-- Reproducible local seed/fixtures, persistent SQLite data, health checks, and network-isolated acceptance tests.
+Build the habit of checking a small source file before using it. The CLI reports the source row count, missing values by column, later duplicate order IDs, invalid ISO dates, negative and nonnumeric amounts, accepted rows, rejected rows, and unique accepted customers. It keeps the input unchanged and puts rejected rows in source order into a separate file.
 
-## Architecture at a glance
+## Local demo
 
-```mermaid
-flowchart LR
-    A["targets.yml"] --> B["Typer CLI"]
-    B --> C["Pydantic validation"]
-    B --> D["Async scheduler and checker"]
-    D --> E["httpx HTTP/TLS checks"]
-    D --> F["Classifier"]
-    F --> G["SQLite repository"]
-    G --> H["Incident engine"]
-    H --> I["Notification plugins"]
-    G --> J["Status history report purge"]
-    I --> K["Console or webhook"]
+After the implementation environment is prepared, the project demo must work offline with this one command:
+
+```text
+uv run csvscout validate fixtures/orders.csv --report .local/report.json --quarantine .local/rejected.csv
 ```
 
-## How to read this specification
+The exact 20-row fixture and expected output are in [08 — CLI specification](docs/08-cli-specification.md). Its expected counts are 20 source rows, 15 accepted rows, 5 rejected rows, and 12 unique accepted customers.
 
-Start with documents 01, 02, 03, and 04. Then read the architecture, data model, CLI specification, and testing strategy. Use documents 06, 10, 11, 12, 13, and 14 during implementation and review.
+## Scope
 
-RFC 2119 keywords have fixed meanings. **MUST** is mandatory. **SHOULD** is recommended after Must work is stable. **MAY** is optional stretch work.
+- Use only Python 3.12 standard-library runtime modules and the specified test and quality tools.
+- Require no database, container, network access, frontend, or external service.
+- Keep all required sample data fictional and deterministic.
+- Do not modify the input file.
+- Finish all required behavior and tests within five days.
 
-IDs show traceability. User stories use `US-NN`. Functional requirements use `FR-AREA-NN`. Business rules use `BR-NN`. Non-functional requirements use `NFR-CAT-NN`. Test cases use `TC-TYPE-NNN`.
+## Read this specification
 
-## Document index
+Start with documents 01–04, then read the data flow, data model, CLI contract, and tests. Use the remaining documents to guide setup, delivery, and review.
 
 | Document | Purpose |
 |---|---|
-| [01 Project overview](docs/01-project-overview.md) | Problem, vision, scope, constraints, and success criteria. |
-| [02 Users and roles](docs/02-users-and-roles.md) | Personas, permissions, journeys, and user stories. |
-| [03 Functional requirements](docs/03-functional-requirements.md) | Must, Should, Could requirements and business rules. |
-| [04 Non-functional requirements](docs/04-non-functional-requirements.md) | Performance, reliability, security, maintainability, portability, and hardware targets. |
-| [05 System architecture](docs/05-system-architecture.md) | Architecture diagrams, flows, deployment view, repository tree, and ADR list. |
-| [06 Tech stack and setup](docs/06-tech-stack-and-setup.md) | Tool versions, alternatives, setup steps, hardware profiles, and learning order. |
-| [07 Data model](docs/07-data-model.md) | Targets-file model, SQLite tables, constraints, indexes, retention, and migrations. |
-| [08 CLI specification](docs/08-cli-specification.md) | Commands, options, output formats, exit codes, and examples. |
-| [09 Testing strategy and test cases](docs/09-testing-strategy-and-test-cases.md) | Test strategy, coverage gates, test catalog, and traceability matrix. |
-| [10 DevOps, CI/CD, and quality](docs/10-devops-ci-cd-and-quality.md) | Git workflow, CI gates, Docker, secrets, releases, and Definition of Done. |
-| [11 Milestones and deliverables](docs/11-milestones-and-deliverables.md) | Effort budget, 6-week plan, Gantt chart, submission, and demo script. |
-| [12 Evaluation rubric](docs/12-evaluation-rubric.md) | Mandatory gates, scoring, bonus, deductions, grade bands, and viva questions. |
-| [13 Interview preparation](docs/13-interview-preparation.md) | STAR pitch, interview questions, fundamentals, resume bullets, and profile tips. |
-| [14 Glossary and resources](docs/14-glossary-and-resources.md) | Glossary, verified official links, free resources, and reading order. |
+| [01 Project overview](docs/01-project-overview.md) | Problem, outcome, scope, and job skills |
+| [02 Users and roles](docs/02-users-and-roles.md) | Two roles and three user stories |
+| [03 Functional requirements](docs/03-functional-requirements.md) | Five Must requirements and data rules |
+| [04 Non-functional requirements](docs/04-non-functional-requirements.md) | Local performance, reliability, and privacy |
+| [05 System architecture](docs/05-system-architecture.md) | Data flow and design decisions |
+| [06 Tech stack and setup](docs/06-tech-stack-and-setup.md) | Versions, setup, and offline demo |
+| [07 Data model](docs/07-data-model.md) | Source, report, and quarantine contracts |
+| [08 CLI specification](docs/08-cli-specification.md) | Exact command, fixture, and outputs |
+| [09 Testing strategy](docs/09-testing-strategy-and-test-cases.md) | 20 acceptance cases and coverage |
+| [10 Quality workflow](docs/10-devops-ci-cd-and-quality.md) | Git, CI, and Definition of Done |
+| [11 Five-day plan](docs/11-milestones-and-deliverables.md) | Tasks and five-minute demo |
+| [12 Evaluation rubric](docs/12-evaluation-rubric.md) | 100-point scoring and pass gates |
+| [13 Interview preparation](docs/13-interview-preparation.md) | Ten questions and a short project pitch |
+| [14 Glossary and resources](docs/14-glossary-and-resources.md) | Plain-language terms and official learning links |
 
-## Rules for students
+## Student work and AI use
 
-### Individual work
-
-You build the implementation alone in your own public repository. You may discuss concepts with classmates, but you must write and explain your own code.
-
-### AI assistant policy
-
-> You MAY use AI assistants (for example GitHub Copilot or ChatGPT) to learn concepts, explain errors, and review your code. You MUST understand every line that you commit. You MUST tell the trainer about significant AI help in the pull request description. You MUST NOT give this specification to an AI tool and submit the generated solution as your own work. In the viva, the trainer asks you to explain and change your code live. If you cannot explain your code, the result is "Rework required".
-
-### How to ask questions
-
-> Open a GitHub Issue in this specification repository. Start the title with `[Question]`. The trainer answers in the issue, so all students can see the answer. If the answer changes the specification, the trainer updates the change log.
-
-### Student repository
-
-> Create a public repository with the name `pulsecheck` in your own GitHub account. Add the trainer (`@sukurcf`) as a collaborator. Do not copy this specification into your repository. Link to it from your README.
-
-### Review model
-
-> Every change goes through a pull request. You MAY merge your own pull request after CI is green and you complete the PR checklist. The trainer reviews at least 2 substantive pull requests from each student every week. The trainer can ask for changes at any time.
-
-### Requirement freeze
-
-> This specification is frozen for the cohort. The trainer can add clarifications. If a change affects grading, the change log states the impact.
-
-### Weekly demo
-
-Every Friday, show a 15-minute demo to the trainer. Show working software, not slides. Explain which FR, BR, NFR, or test IDs you completed that week.
+Work in your own implementation repository and be ready to explain every change. You may use an AI assistant to learn concepts, understand errors, or review your work. Disclose significant assistance as your trainer requests. Do not submit generated work that you cannot explain.
 
 ## Change log
 
 | Version | Date | Notes |
 |---|---|---|
-| 1.0 | 2026-10-02 | First release |
-| 1.1 | 2026-10-02 | Backend/CLI-only revision. Frontend and cloud exercises are removed; their effort and grading points move to Python report statistics, replay validation, tests, and local operations. Existing Python coverage and 45-test minimum remain. |
+| 1.0 | 2026-10-02 | First published version; retained as project history. |
+| 1.1 | 2026-10-02 | Revised specification and grading; retained as project history. |
+| 1.2 | 2026-10-13 | Assigns this brief to CSV Scout and sets the duration to 5 days × 6 hours = 30 hours. Grading now uses the five Must requirements, 15–20 distinct tests, 80% line and 70% branch coverage, and the exact local demo. Earlier assessment criteria are superseded; there is no bonus work. |
